@@ -10,6 +10,7 @@ const navLinks = [
   { href: '/matches',     label: 'Matches' },
   { href: '/groups',      label: 'Groups' },
   { href: '/bracket',     label: 'Bracket' },
+  { href: '/stats',       label: 'Stats' },
   { href: '/leaderboard', label: 'Leaderboard' },
 ]
 

@@ -175,7 +175,7 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
                 disabled={!isEditable}
                 onClick={() => isEditable && setOutcome(o)}
                 className={cn(
-                  'py-2 rounded-lg text-sm font-semibold border transition-all',
+                  'py-2 px-1 rounded-lg text-xs font-semibold border transition-all truncate',
                   outcome === o
                     ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-500/20'
                     : !isEditable
@@ -183,8 +183,8 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
                     : 'bg-white/5 text-gray-300 border-white/15 hover:bg-white/10 hover:border-white/25',
                 )}
               >
-                {o === 'home' ? (match.home_team?.code ?? 'Home') :
-                 o === 'away' ? (match.away_team?.code ?? 'Away') : 'Draw'}
+                {o === 'home' ? (match.home_team?.name ?? 'Home win') :
+                 o === 'away' ? (match.away_team?.name ?? 'Away win') : 'Draw'}
               </button>
             ))}
           </div>
@@ -235,7 +235,7 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
           )}
           {kickoffLocked && outcome && (
             <p className="text-xs text-yellow-500/80 text-center">
-              You predicted: <strong>{outcome === 'home' ? match.home_team?.code : outcome === 'away' ? match.away_team?.code : 'Draw'}</strong>
+              You predicted: <strong>{outcome === 'home' ? (match.home_team?.name ?? 'Home win') : outcome === 'away' ? (match.away_team?.name ?? 'Away win') : 'Draw'}</strong>
               {homeGoals !== '' ? ` ${homeGoals}–${awayGoals}` : ''}
             </p>
           )}
@@ -277,8 +277,8 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
           <p className="text-xs text-gray-500 mt-1">
             You predicted:{' '}
             <span className="text-gray-300">
-              {prediction.predicted_outcome === 'home' ? match.home_team?.code :
-               prediction.predicted_outcome === 'away' ? match.away_team?.code : 'Draw'}
+              {prediction.predicted_outcome === 'home' ? (match.home_team?.name ?? 'Home win') :
+               prediction.predicted_outcome === 'away' ? (match.away_team?.name ?? 'Away win') : 'Draw'}
               {prediction.predicted_home !== null ? ` ${prediction.predicted_home}–${prediction.predicted_away}` : ''}
             </span>
           </p>
