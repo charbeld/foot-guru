@@ -7,9 +7,13 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
+function usernameToEmail(username: string) {
+  return `${username}@footguru.app`
+}
+
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail]       = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
@@ -19,9 +23,12 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({
+      email: usernameToEmail(username.toLowerCase().trim()),
+      password,
+    })
     if (error) {
-      setError(error.message)
+      setError('Invalid username or password')
       setLoading(false)
     } else {
       router.push('/dashboard')
@@ -31,13 +38,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-[#080c0a]">
-      {/* Background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-green-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">⚽</div>
           <h1 className="text-2xl font-black bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
@@ -51,9 +56,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              id="email" label="Email" type="email" value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com" required autoComplete="email"
+              id="username" label="Username" type="text" value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="your_username" required autoComplete="username"
             />
             <Input
               id="password" label="Password" type="password" value={password}

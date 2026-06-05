@@ -7,13 +7,17 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
+// Email is generated internally as username@footguru.app — users never see it
+function usernameToEmail(username: string) {
+  return `${username}@footguru.app`
+}
+
 export default function SignupPage() {
   const router = useRouter()
-  const [username, setUsername]   = useState('')
-  const [email, setEmail]         = useState('')
-  const [password, setPassword]   = useState('')
-  const [error, setError]         = useState('')
-  const [loading, setLoading]     = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,16 +27,13 @@ export default function SignupPage() {
 
     const supabase = createClient()
     const { error } = await supabase.auth.signUp({
-      email,
+      email: usernameToEmail(username),
       password,
-      options: {
-        data: { username, display_name: username },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { data: { username, display_name: username } },
     })
 
     if (error) {
-      setError(error.message)
+      setError(error.message === 'User already registered' ? 'Username already taken' : error.message)
       setLoading(false)
     } else {
       router.push('/dashboard')
@@ -63,20 +64,17 @@ export default function SignupPage() {
               id="username" label="Username" type="text" value={username}
               onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
               placeholder="your_username" required minLength={3} maxLength={20}
-            />
-            <Input
-              id="email" label="Email" type="email" value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com" required
+              autoComplete="username"
             />
             <Input
               id="password" label="Password" type="password" value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="min 8 characters" required minLength={8}
+              autoComplete="new-password"
             />
             {error && <p className="text-sm text-red-400">{error}</p>}
             <Button type="submit" loading={loading} className="w-full" size="md">
-              Create account
+              Join the game
             </Button>
           </form>
         </div>
