@@ -12,44 +12,18 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createAdminClient()
-
-  // Find live matches
-  const { data: liveMatches } = await supabase
-    .from('matches')
-    .select('*, home_team:teams!home_team_id(*), away_team:teams!away_team_id(*)')
-    .eq('status', 'live')
-
-  if (!liveMatches?.length) return NextResponse.json({ synced: 0 })
-
   const apiKey = process.env.FOOTBALL_DATA_API_KEY
   let synced = 0
 
-  for (const match of liveMatches) {
-    if (!match.external_id) continue
+  // ── 1. Score already-finished matches that have unscored predictions ──────
+  // (covers manually-entered scores and dummy matches without external_id)
+  const { data: finishedMatches } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('status', 'finished')
+    .not('home_score', 'is', null)
 
-    // Fetch from football-data.org
-    const res = await fetch(
-      `https://api.football-data.org/v4/matches/${match.external_id}`,
-      { headers: { 'X-Auth-Token': apiKey! } }
-    )
-
-    if (!res.ok) continue
-
-    const data = await res.json()
-    const score = data.score?.fullTime
-
-    if (!score || data.status !== 'FINISHED') continue
-
-    const homeScore: number = score.home ?? 0
-    const awayScore: number = score.away ?? 0
-
-    // Update match as finished
-    await supabase
-      .from('matches')
-      .update({ home_score: homeScore, away_score: awayScore, status: 'finished' })
-      .eq('id', match.id)
-
-    // Score all predictions for this match
+  for (const match of finishedMatches ?? []) {
     const { data: predictions } = await supabase
       .from('predictions')
       .select('*')
@@ -61,27 +35,77 @@ export async function GET(request: Request) {
 
     for (const pred of predictions) {
       const result = calculateScore({
+        homeScore:        match.home_score,
+        awayScore:        match.away_score,
+        predictedOutcome: pred.predicted_outcome as PredictionOutcome,
+        predictedHome:    pred.predicted_home,
+        predictedAway:    pred.predicted_away,
+        homeElo:          match.home_elo,
+        awayElo:          match.away_elo,
+        stage:            match.stage as MatchStage,
+      })
+      await supabase.from('predictions').update({
+        outcome_correct:     result.outcomeCorrect,
+        exact_score_correct: result.exactScoreCorrect,
+        elo_multiplier:      result.eloMultiplier,
+        points_earned:       result.pointsEarned,
+      }).eq('id', pred.id)
+    }
+    synced++
+  }
+
+  // ── 2. Sync live matches from football-data.org (real tournament) ─────────
+  const { data: liveMatches } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('status', 'live')
+
+  for (const match of liveMatches ?? []) {
+    if (!match.external_id) continue
+
+    const res = await fetch(
+      `https://api.football-data.org/v4/matches/${match.external_id}`,
+      { headers: { 'X-Auth-Token': apiKey! } }
+    )
+    if (!res.ok) continue
+
+    const data = await res.json()
+    const score = data.score?.fullTime
+    if (!score || data.status !== 'FINISHED') continue
+
+    const homeScore: number = score.home ?? 0
+    const awayScore: number = score.away ?? 0
+
+    await supabase
+      .from('matches')
+      .update({ home_score: homeScore, away_score: awayScore, status: 'finished' })
+      .eq('id', match.id)
+
+    const { data: predictions } = await supabase
+      .from('predictions')
+      .select('*')
+      .eq('match_id', match.id)
+      .eq('is_locked', true)
+      .is('points_earned', null)
+
+    for (const pred of predictions ?? []) {
+      const result = calculateScore({
         homeScore,
         awayScore,
         predictedOutcome: pred.predicted_outcome as PredictionOutcome,
-        predictedHome: pred.predicted_home,
-        predictedAway: pred.predicted_away,
-        homeElo: match.home_elo,
-        awayElo: match.away_elo,
-        stage: match.stage as MatchStage,
+        predictedHome:    pred.predicted_home,
+        predictedAway:    pred.predicted_away,
+        homeElo:          match.home_elo,
+        awayElo:          match.away_elo,
+        stage:            match.stage as MatchStage,
       })
-
-      await supabase
-        .from('predictions')
-        .update({
-          outcome_correct:      result.outcomeCorrect,
-          exact_score_correct:  result.exactScoreCorrect,
-          elo_multiplier:       result.eloMultiplier,
-          points_earned:        result.pointsEarned,
-        })
-        .eq('id', pred.id)
+      await supabase.from('predictions').update({
+        outcome_correct:     result.outcomeCorrect,
+        exact_score_correct: result.exactScoreCorrect,
+        elo_multiplier:      result.eloMultiplier,
+        points_earned:       result.pointsEarned,
+      }).eq('id', pred.id)
     }
-
     synced++
   }
 
