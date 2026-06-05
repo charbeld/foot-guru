@@ -34,8 +34,9 @@ const sb = createClient(
 
 // ─── Hardcoded Wikipedia URLs ─────────────────────────────────────────────────
 export const WIKI_URLS = {
-  schedule:   'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_schedule',
-  statistics: 'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_statistics',
+  schedule:      'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_schedule',
+  knockoutStage: 'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_knockout_stage',
+  statistics:    'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_statistics',
   groups: Object.fromEntries(
     'ABCDEFGHIJKL'.split('').map(g => [
       g, `https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_Group_${g}`,
@@ -43,11 +44,18 @@ export const WIKI_URLS = {
   ),
 }
 
-// ─── Fetch wikitext ───────────────────────────────────────────────────────────
-async function fetchWikitext(url) {
+// ─── Fetch wikitext (with retry on 429) ──────────────────────────────────────
+async function fetchWikitext(url, attempt = 0) {
   const title = decodeURIComponent(url.split('/wiki/')[1])
   const api = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&prop=wikitext&format=json`
   const res = await fetch(api, { headers: { 'User-Agent': 'FootGuru-WC2026/1.0' } })
+  if (res.status === 429) {
+    if (attempt >= 3) throw new Error('HTTP 429 (rate limited after 3 retries)')
+    const wait = (attempt + 1) * 5000
+    process.stdout.write(` [429, retry in ${wait/1000}s] `)
+    await new Promise(r => setTimeout(r, wait))
+    return fetchWikitext(url, attempt + 1)
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = await res.json()
   return data.parse?.wikitext?.['*'] ?? ''
@@ -272,47 +280,97 @@ async function main() {
       else wikiTagged++
     }
     console.log(`${found}/${boxCount} matches tagged`)
-    await new Promise(r => setTimeout(r, 400))
+    await new Promise(r => setTimeout(r, 1200))
   }
 
-  // ── Knockout schedule page ────────────────────────────────────────────────
-  console.log(`\nFetching knockout schedule…`)
-  const knockoutMatches = (dbMatches ?? []).filter(m => m.stage !== 'group')
-  const knockoutByDate = {}
-  for (const m of knockoutMatches) {
-    const key = new Date(m.kickoff_at).toISOString().slice(0, 10)
-    ;(knockoutByDate[key] ??= []).push(m)
+  // ── Knockout stage page ───────────────────────────────────────────────────
+  console.log(`\nFetching knockout stage times from Wikipedia…`)
+
+  // Map Wikipedia level-2 section headings → our stage values
+  const HEADING_TO_STAGE = {
+    'round of 32':          'round_of_32',
+    'round of 16':          'round_of_16',
+    'quarterfinals':        'quarter_final',
+    'quarter-finals':       'quarter_final',
+    'quarter finals':       'quarter_final',
+    'semifinals':           'semi_final',
+    'semi-finals':          'semi_final',
+    'semi finals':          'semi_final',
+    'match for third place':'third_place',
+    'third-place match':    'third_place',
+    'third place match':    'third_place',
+    'final':                'final',
+  }
+
+  // Split wikitext into LEVEL-2 sections only (== heading == not ===)
+  function splitBySections(text) {
+    const out = []
+    // Match exactly two = signs (not three or more)
+    const re = /^==(?!=)\s*([^=]+?)\s*==(?!=)/gm
+    let lastIdx = 0, lastHeading = ''
+    let m
+    while ((m = re.exec(text)) !== null) {
+      if (lastIdx > 0) out.push({ heading: lastHeading, text: text.slice(lastIdx, m.index) })
+      lastIdx = m.index + m[0].length
+      lastHeading = m[1].trim()
+    }
+    out.push({ heading: lastHeading, text: text.slice(lastIdx) })
+    return out
   }
 
   try {
-    const schedText = await fetchWikitext(WIKI_URLS.schedule)
-    let ksFound = 0
-    for (const { fields } of extractFootballBoxes(schedText)) {
-      const dateObj  = parseWikiDate(fields.date ?? '')
-      const wikiTime = parseWikiTime(fields.time, fields.tz)
-      const utcTime  = toUTC(dateObj, wikiTime)
-      if (!utcTime) continue
+    const ksText = await fetchWikitext(WIKI_URLS.knockoutStage)
+    const sections = splitBySections(ksText)
 
-      const wikiDate = utcTime.slice(0, 10)
-      for (const dbMatch of (knockoutByDate[wikiDate] ?? [])) {
+    // Index DB knockout matches by stage, sorted by kickoff_at asc
+    const knockoutByStage = {}
+    for (const m of (dbMatches ?? []).filter(m => m.stage !== 'group')) {
+      ;(knockoutByStage[m.stage] ??= []).push(m)
+    }
+    for (const arr of Object.values(knockoutByStage))
+      arr.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
+
+    let ksTagged = 0
+    for (const { heading, text } of sections) {
+      const stage = HEADING_TO_STAGE[heading.toLowerCase()]
+      if (!stage) continue
+
+      // Collect all Wikipedia times for this section, sorted asc
+      const wikiTimes = []
+      for (const { fields } of extractFootballBoxes(text)) {
+        const dateObj  = parseWikiDate(fields.date ?? '')
+        const wikiTime = parseWikiTime(fields.time, fields.tz)
+        const utcTime  = toUTC(dateObj, wikiTime)
+        if (utcTime) wikiTimes.push(utcTime)
+      }
+      wikiTimes.sort()
+
+      const dbArr = knockoutByStage[stage] ?? []
+      if (wikiTimes.length === 0) continue
+      console.log(`  ${stage}: ${wikiTimes.length} Wikipedia times, ${dbArr.length} DB matches`)
+
+      // Positional match: Wikipedia box N ↔ DB match N (both sorted by time)
+      for (let i = 0; i < Math.min(wikiTimes.length, dbArr.length); i++) {
+        const utcTime = wikiTimes[i]
+        const dbMatch = dbArr[i]
+        const updates = { wiki_url: WIKI_URLS.knockoutStage }
         const diff = Math.abs(new Date(utcTime).getTime() - new Date(dbMatch.kickoff_at).getTime())
-        if (diff > 4 * 3_600_000) continue
-        ksFound++
-        const updates = { wiki_url: WIKI_URLS.schedule }
         if (diff > 60_000) {
+          const oldT = new Date(dbMatch.kickoff_at).toLocaleString('en-GB',{timeZone:'Asia/Beirut',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+          const newT = new Date(utcTime).toLocaleString('en-GB',{timeZone:'Asia/Beirut',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+          console.log(`    🕐 ${stage} #${i+1}: ${oldT} → ${newT} (Beirut)`)
           updates.kickoff_at = utcTime
-          const oldT = new Date(dbMatch.kickoff_at).toLocaleString('en-GB',{timeZone:'Asia/Beirut',weekday:'short',hour:'2-digit',minute:'2-digit'})
-          const newT = new Date(utcTime).toLocaleString('en-GB',{timeZone:'Asia/Beirut',weekday:'short',hour:'2-digit',minute:'2-digit'})
-          console.log(`  🕐 Knockout (${dbMatch.stage}): ${oldT} → ${newT}`)
           timeUpdates++
         }
-        await sb.from('matches').update(updates).eq('id', dbMatch.id)
-        wikiTagged++
+        const { error } = await sb.from('matches').update(updates).eq('id', dbMatch.id)
+        if (error) { console.log(`    ❌ ${error.message}`); errors++ }
+        else { wikiTagged++; ksTagged++ }
       }
     }
-    console.log(`  ${ksFound} knockout matches processed`)
+    console.log(`  Total knockout matches updated: ${ksTagged}`)
   } catch (e) {
-    console.log(`  ⚠ Schedule page error: ${e.message}`)
+    console.log(`  ⚠ Knockout stage error: ${e.message}`)
+    console.error(e)
   }
 
   console.log(`
