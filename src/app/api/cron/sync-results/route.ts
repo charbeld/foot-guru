@@ -25,17 +25,20 @@ export async function GET(request: Request) {
     .lte('kickoff_at', now)
 
   // ── 2. Check live matches against football-data.org for final scores ───────
-  // Only call the API once 90 minutes have passed — no point checking mid-match.
-  // We allow up to 130 minutes to cover extra time + penalties.
-  const ninetyMinutesAgo  = new Date(Date.now() - 90  * 60_000).toISOString()
-  const onThirtyMinutesAgo = new Date(Date.now() - 130 * 60_000).toISOString()
+  // First API call at 98 min after kickoff (regulation + buffer), then every
+  // 5 min (cron cadence) until 130 min — covers extra time + penalties.
+  // After 130 min we stop polling; step 3 below catches anything we miss once
+  // the daily fixture sync marks the match as finished.
+  const ninetyEightMinutesAgo = new Date(Date.now() - 98  * 60_000).toISOString()
+  const oneThirtyMinutesAgo   = new Date(Date.now() - 130 * 60_000).toISOString()
 
   const { data: liveMatches } = await supabase
     .from('matches')
     .select('*')
     .eq('status', 'live')
     .not('external_id', 'is', null)
-    .lte('kickoff_at', ninetyMinutesAgo)   // at least 90 min since kickoff
+    .lte('kickoff_at', ninetyEightMinutesAgo)  // at least 98 min since kickoff
+    .gte('kickoff_at', oneThirtyMinutesAgo)    // at most 130 min since kickoff
 
   for (const match of liveMatches ?? []) {
     const res = await fetch(
