@@ -10,7 +10,6 @@ const navLinks = [
   { href: '/matches',     label: 'Matches' },
   { href: '/groups',      label: 'Groups' },
   { href: '/leaderboard', label: 'Leaderboard' },
-  { href: '/leagues',     label: 'Leagues' },
 ]
 
 export function Navbar() {
