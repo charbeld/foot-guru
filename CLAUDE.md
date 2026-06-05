@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session workflow (IMPORTANT — read at the start of every session)
+
+Every session must run on a dated branch so changes land as a reviewable PR.
+
+**At the start of a session**, before making any changes, run:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/start-session.ps1
+```
+This checks out `main`, pulls, then creates (or resumes) `session/YYYY-MM-DD` and sets the upstream.
+
+**During the session**, the Stop hook in `.claude/settings.json` auto-commits and pushes to the session branch after every Claude turn via `scripts/auto-deploy.ps1`. The hook is a no-op on `main` — so nothing is committed until the session branch exists.
+
+**At the end of a session**, use the `/create-pr` command (or ask Claude to open a PR). Claude will run `gh pr create` targeting `main` with a summary of all changes made during the session.
+
 ## Critical: Next.js Version
 
 This project uses **Next.js 16.2.7** with **React 19**. These versions have breaking changes from earlier releases. Before modifying any routing, rendering, or data-fetching code, read the relevant guide in `node_modules/next/dist/docs/`. Do not assume any Next.js conventions from training data — verify first.
