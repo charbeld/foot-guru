@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File \"C:\\Users\\Charbel\\Desktop\\Claude\\Foot Guru\\foot-guru\\scripts\\auto-deploy.ps1\""
+          }
+        ]
+      }
+    ]
+  }
+}
