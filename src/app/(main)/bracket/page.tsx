@@ -1,9 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
 import { cn, formatKickoff } from '@/lib/utils'
-import type { Match, MatchStage } from '@/types'
+import type { Match } from '@/types'
 
 export const revalidate = 300
+
+// ─── Sub-group shape ──────────────────────────────────────────────────────────
+type SubStyle = { border: string; bg: string; badge: string; text: string }
 
 // ─── Quadrant color palette ───────────────────────────────────────────────────
 const QUADRANT_COLORS = [
@@ -16,6 +19,8 @@ const QUADRANT_COLORS = [
     arrow:   'text-blue-500/60',
     label:   'Q1',
     sfLabel: 'Q1 → Semi-Final 1',
+    subA: { border: 'border-l-sky-400',   bg: 'bg-sky-400/10',   badge: 'bg-sky-400/25 text-sky-300',     text: 'text-sky-300'   } as SubStyle,
+    subB: { border: 'border-l-blue-600',  bg: 'bg-blue-600/10',  badge: 'bg-blue-600/30 text-blue-300',   text: 'text-blue-400'  } as SubStyle,
   },
   {
     border:  'border-l-purple-500',
@@ -26,6 +31,8 @@ const QUADRANT_COLORS = [
     arrow:   'text-purple-500/60',
     label:   'Q2',
     sfLabel: 'Q2 → Semi-Final 1',
+    subA: { border: 'border-l-fuchsia-400', bg: 'bg-fuchsia-400/10', badge: 'bg-fuchsia-400/25 text-fuchsia-300', text: 'text-fuchsia-300' } as SubStyle,
+    subB: { border: 'border-l-violet-600',  bg: 'bg-violet-600/10',  badge: 'bg-violet-600/30 text-violet-300',  text: 'text-violet-400'  } as SubStyle,
   },
   {
     border:  'border-l-orange-500',
@@ -36,6 +43,8 @@ const QUADRANT_COLORS = [
     arrow:   'text-orange-500/60',
     label:   'Q3',
     sfLabel: 'Q3 → Semi-Final 2',
+    subA: { border: 'border-l-amber-400',  bg: 'bg-amber-400/10',  badge: 'bg-amber-400/25 text-amber-300',  text: 'text-amber-300'  } as SubStyle,
+    subB: { border: 'border-l-red-500',    bg: 'bg-red-500/10',    badge: 'bg-red-500/25 text-red-300',      text: 'text-red-400'    } as SubStyle,
   },
   {
     border:  'border-l-emerald-500',
@@ -46,6 +55,8 @@ const QUADRANT_COLORS = [
     arrow:   'text-emerald-500/60',
     label:   'Q4',
     sfLabel: 'Q4 → Semi-Final 2',
+    subA: { border: 'border-l-green-400',  bg: 'bg-green-400/10',  badge: 'bg-green-400/25 text-green-300',  text: 'text-green-300'  } as SubStyle,
+    subB: { border: 'border-l-teal-500',   bg: 'bg-teal-500/10',   badge: 'bg-teal-500/25 text-teal-300',    text: 'text-teal-400'   } as SubStyle,
   },
 ]
 
@@ -89,12 +100,24 @@ function Legend() {
 }
 
 // ─── Compact match tile for bracket ──────────────────────────────────────────
-function BracketTile({ match, qIdx }: { match: Match; qIdx: number }) {
-  const color   = qIdx >= 0 ? QUADRANT_COLORS[qIdx] : null
-  const isTBD   = !match.home_team_id || !match.away_team_id
-  const isDone  = match.status === 'finished'
+function BracketTile({
+  match, qIdx, sub,
+}: {
+  match: Match
+  qIdx: number
+  sub?: SubStyle & { label: 'A' | 'B' }
+}) {
+  const color  = qIdx >= 0 ? QUADRANT_COLORS[qIdx] : null
+  const isTBD  = !match.home_team_id || !match.away_team_id
+  const isDone = match.status === 'finished'
   const homeWon = isDone && match.home_score! > match.away_score!
   const awayWon = isDone && match.away_score! > match.home_score!
+
+  const tileStyle = sub
+    ? `${sub.border} ${sub.bg}`
+    : color
+    ? `${color.border} ${color.bg}`
+    : 'border-l-yellow-500 bg-yellow-500/5'
 
   function Side({ side }: { side: 'home' | 'away' }) {
     const team  = side === 'home' ? match.home_team  : match.away_team
@@ -129,15 +152,48 @@ function BracketTile({ match, qIdx }: { match: Match; qIdx: number }) {
   return (
     <div className={cn(
       'rounded-lg border border-white/10 overflow-hidden border-l-4 transition-all',
-      color ? `${color.border} ${color.bg}` : 'border-l-yellow-500 bg-yellow-500/5',
+      tileStyle,
       isTBD && 'opacity-55',
     )}>
+      {/* Sub-group badge */}
+      {sub && (
+        <div className="flex justify-end px-2 pt-1">
+          <span className={cn('text-[9px] font-black px-1.5 rounded leading-tight', sub.badge)}>
+            {sub.label}
+          </span>
+        </div>
+      )}
       <Side side="home" />
       <div className="border-t border-white/10" />
       <Side side="away" />
       <div className="px-2.5 py-1 border-t border-white/5">
         <span className="text-[10px] text-gray-700 leading-none">{formatKickoff(match.kickoff_at)}</span>
       </div>
+    </div>
+  )
+}
+
+// ─── R32 sub-pair group (A or B) ─────────────────────────────────────────────
+function SubPair({
+  matches, sub, qIdx,
+}: {
+  matches: Match[]
+  sub: SubStyle & { label: 'A' | 'B' }
+  qIdx: number
+}) {
+  if (matches.length === 0) return null
+  return (
+    <div className={cn('rounded-md border border-white/5 p-1.5 space-y-1', sub.bg)}>
+      <div className="flex items-center gap-1.5 px-0.5 mb-1">
+        <span className={cn('text-[9px] font-black px-1.5 rounded leading-tight', sub.badge)}>
+          {sub.label}
+        </span>
+        <div className="h-px flex-1 bg-white/8" />
+        <span className={cn('text-[9px]', sub.text)}>→ R16 {sub.label}</span>
+      </div>
+      {matches.map(m => (
+        <BracketTile key={m.id} match={m} qIdx={qIdx} sub={sub} />
+      ))}
     </div>
   )
 }
@@ -192,7 +248,6 @@ export default async function BracketPage() {
 
   const all = matches ?? []
 
-  // ── Bucket matches by quadrant and stage ──────────────────────────────────
   type QData = { r32: Match[]; r16: Match[]; qf: Match[] }
   const qBuckets: QData[] = [
     { r32: [], r16: [], qf: [] },
@@ -220,7 +275,6 @@ export default async function BracketPage() {
   return (
     <div className="space-y-6">
 
-      {/* ── Page header ───────────────────────────────────────────────────── */}
       <div>
         <h1 className="text-2xl font-black text-white">Knockout Bracket</h1>
         <p className="text-gray-500 text-sm mt-1">
@@ -237,7 +291,6 @@ export default async function BracketPage() {
         </div>
       ) : (
         <>
-          {/* ── Round-of-32 header ──────────────────────────────────────── */}
           {qBuckets.some(q => q.r32.length > 0) && (
             <div className="text-center">
               <span className="text-xs font-bold uppercase tracking-widest text-gray-500 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full">
@@ -260,6 +313,9 @@ export default async function BracketPage() {
                 </div>
               )
 
+              const subA = { ...color.subA, label: 'A' as const }
+              const subB = { ...color.subB, label: 'B' as const }
+
               return (
                 <div key={qIdx} className={cn('rounded-xl border p-4 space-y-3', color.header)}>
                   {/* Quadrant header */}
@@ -271,37 +327,33 @@ export default async function BracketPage() {
                     <span className="text-[10px] text-gray-600 ml-auto">{color.sfLabel.split(' → ')[1]}</span>
                   </div>
 
-                  {/* Round of 32 */}
+                  {/* Round of 32 — shown as two labelled sub-pairs */}
                   {q.r32.length > 0 && (
                     <div>
                       <StageLabel label="Round of 32" color={color} />
-                      <div className="space-y-1.5">
-                        {q.r32.map(m => <BracketTile key={m.id} match={m} qIdx={qIdx} />)}
+                      <div className="space-y-2">
+                        <SubPair matches={q.r32.slice(0, 2)} sub={subA} qIdx={qIdx} />
+                        <SubPair matches={q.r32.slice(2, 4)} sub={subB} qIdx={qIdx} />
                       </div>
                     </div>
                   )}
 
-                  {/* R32 → R16 connector */}
-                  {q.r32.length > 0 && q.r16.length > 0 && (
-                    <RoundConnector color={color} />
-                  )}
+                  {q.r32.length > 0 && q.r16.length > 0 && <RoundConnector color={color} />}
 
-                  {/* Round of 16 */}
+                  {/* Round of 16 — each card inherits its pair's sub-color */}
                   {q.r16.length > 0 && (
                     <div>
                       <StageLabel label="Round of 16" color={color} />
                       <div className="space-y-1.5">
-                        {q.r16.map(m => <BracketTile key={m.id} match={m} qIdx={qIdx} />)}
+                        {q.r16[0] && <BracketTile match={q.r16[0]} qIdx={qIdx} sub={subA} />}
+                        {q.r16[1] && <BracketTile match={q.r16[1]} qIdx={qIdx} sub={subB} />}
                       </div>
                     </div>
                   )}
 
-                  {/* R16 → QF connector */}
-                  {q.r16.length > 0 && q.qf.length > 0 && (
-                    <RoundConnector color={color} />
-                  )}
+                  {q.r16.length > 0 && q.qf.length > 0 && <RoundConnector color={color} />}
 
-                  {/* Quarter-Final */}
+                  {/* Quarter-Final — no sub-group, both paths merge */}
                   {q.qf.length > 0 && (
                     <div>
                       <StageLabel label="Quarter-Final" color={color} />
@@ -311,10 +363,7 @@ export default async function BracketPage() {
                     </div>
                   )}
 
-                  {/* QF → SF connector */}
-                  {q.qf.length > 0 && sfMatches.length > 0 && (
-                    <RoundConnector color={color} />
-                  )}
+                  {q.qf.length > 0 && sfMatches.length > 0 && <RoundConnector color={color} />}
                 </div>
               )
             })}
@@ -325,9 +374,7 @@ export default async function BracketPage() {
             <div className="space-y-3">
               <StageDivider label="Semi-Finals" sublabel="Q1+Q2 winner · Q3+Q4 winner" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                {sfMatches.map(m => (
-                  <BracketTile key={m.id} match={m} qIdx={-1} />
-                ))}
+                {sfMatches.map(m => <BracketTile key={m.id} match={m} qIdx={-1} />)}
               </div>
             </div>
           )}
@@ -337,9 +384,7 @@ export default async function BracketPage() {
             <div className="space-y-3">
               <StageDivider label="Third Place" sublabel="Semi-final losers" />
               <div className="max-w-sm mx-auto">
-                {thirdMatches.map(m => (
-                  <BracketTile key={m.id} match={m} qIdx={-1} />
-                ))}
+                {thirdMatches.map(m => <BracketTile key={m.id} match={m} qIdx={-1} />)}
               </div>
             </div>
           )}
@@ -349,9 +394,7 @@ export default async function BracketPage() {
             <div className="space-y-3">
               <StageDivider label="🏆 The Final" sublabel="World Cup Champion" gold />
               <div className="max-w-sm mx-auto">
-                {finalMatches.map(m => (
-                  <BracketTile key={m.id} match={m} qIdx={-1} />
-                ))}
+                {finalMatches.map(m => <BracketTile key={m.id} match={m} qIdx={-1} />)}
               </div>
             </div>
           )}

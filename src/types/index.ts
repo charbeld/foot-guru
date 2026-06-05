@@ -29,6 +29,7 @@ export interface Match {
   external_id: string | null
   placeholder_home: string | null
   placeholder_away: string | null
+  wiki_url: string | null
   home_team?: Team
   away_team?: Team
 }

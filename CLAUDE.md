@@ -43,6 +43,7 @@ Examples: `stats/StatsClient.tsx`, `leaderboard/LeaderboardClient.tsx`, `(main)/
 
 ### Auth & routing
 - `src/proxy.ts` exports the middleware function that protects all routes — unauthenticated users are redirected to `/login`, authenticated users hitting `/login` or `/signup` are redirected to `/dashboard`.
+- **Never create `src/middleware.ts`**. Next.js 16 errors if both `middleware.ts` and `proxy.ts` exist: `"Both middleware file and proxy file are detected. Please use proxy.ts only."` Delete any stale `middleware.ts` immediately.
 - The route group `src/app/(auth)/` contains login and signup pages.
 - The route group `src/app/(main)/` contains all protected pages; its `layout.tsx` verifies auth via Supabase and renders the `<Navbar>`.
 - OAuth callback lands at `src/app/auth/callback/route.ts`, exchanges the code for a session, then redirects to `/dashboard`.
@@ -67,3 +68,11 @@ All live tournament data comes from **football-data.org v4** (`/v4/competitions/
 
 ### Timestamps
 All times are stored in UTC. Display uses the **Asia/Beirut** timezone (`formatKickoff()` in `src/lib/utils.ts`).
+
+## Deployment
+
+### Auto-deploy hook
+`.claude/settings.json` registers a `Stop` hook that runs `scripts/auto-deploy.ps1` after every Claude turn. It stages, commits, and pushes any uncommitted changes automatically. Vercel then deploys from the GitHub push.
+
+### Vercel cron restriction (Hobby plan)
+`vercel.json` must **not** contain cron schedules that run more than once per day — the Hobby plan rejects them and **silently blocks all deployments** (builds will fail at the cron validation step, not the compile step). The `sync-results` every-5-min job is handled by **pg_cron inside Supabase**, not Vercel. Only `sync-fixtures` (daily at `0 2 * * *`) belongs in `vercel.json`.
