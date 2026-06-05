@@ -79,8 +79,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* Scoring guide */}
-      <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
-        <h2 className="font-bold text-white mb-4">How Points Work</h2>
+      <div className="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-6">
+        <h2 className="font-bold text-white">How Points Work</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
           <div>
             <div className="text-green-400 font-semibold mb-2">Base Points</div>
@@ -108,8 +109,74 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-white/10 text-xs text-gray-500">
-          Example: Correct outcome in a Final with big upset → (5 + 8) × 3.0 × 3.0 = <span className="text-yellow-400 font-bold">117 pts</span>
+
+        {/* Real examples */}
+        <div className="border-t border-white/10 pt-5">
+          <div className="text-sm font-semibold text-gray-400 mb-3">Real examples</div>
+          <div className="space-y-3">
+            {[
+              {
+                label: 'Spain vs Qatar · Group Stage',
+                flags: ['🇪🇸','🇶🇦'],
+                scenario: 'You predict Spain win (favourite, ELO gap 732)',
+                calc: '5 × 1.0 × 1.0',
+                pts: 5,
+                color: 'text-green-400',
+                note: 'No upset bonus — you picked the favourite',
+              },
+              {
+                label: 'Morocco vs Netherlands · Group Stage',
+                flags: ['🇲🇦','🇳🇱'],
+                scenario: 'You predict Morocco win + exact score 1–0 (ELO gap 120)',
+                calc: '(5 + 8) × 1.5 × 1.0',
+                pts: 20,
+                color: 'text-orange-400',
+                note: 'Slight upset bonus applied',
+              },
+              {
+                label: 'Argentina vs Germany · Quarter-Final',
+                flags: ['🇦🇷','🇩🇪'],
+                scenario: 'You predict Germany win (ELO gap 188, big upset)',
+                calc: '5 × 2.0 × 2.0',
+                pts: 20,
+                color: 'text-yellow-400',
+                note: 'Upset + Quarter-Final multipliers stack',
+              },
+              {
+                label: 'Spain vs Argentina · Final',
+                flags: ['🇪🇸','🇦🇷'],
+                scenario: 'You predict Argentina win + exact score 2–1 (ELO gap 42)',
+                calc: '(5 + 8) × 1.0 × 3.0',
+                pts: 39,
+                color: 'text-red-400',
+                note: 'ELO gap too small for upset bonus — but it\'s the Final!',
+              },
+              {
+                label: 'Saudi Arabia vs France · Round of 16',
+                flags: ['🇸🇦','🇫🇷'],
+                scenario: 'You predict Saudi Arabia win (ELO gap 496, massive upset!)',
+                calc: '5 × 3.0 × 1.5',
+                pts: 23,
+                color: 'text-red-400',
+                note: 'Maximum upset multiplier. Brave call.',
+              },
+            ].map((ex, i) => (
+              <div key={i} className="bg-white/[0.03] rounded-xl p-4 flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span>{ex.flags[0]}</span><span>{ex.flags[1]}</span>
+                    <span className="text-xs font-semibold text-gray-300 ml-1">{ex.label}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-1">{ex.scenario}</p>
+                  <p className="text-xs text-gray-600 italic">{ex.note}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs text-gray-500 font-mono">{ex.calc}</div>
+                  <div className={`text-xl font-black ${ex.color}`}>{ex.pts} pts</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
