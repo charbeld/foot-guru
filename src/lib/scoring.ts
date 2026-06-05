@@ -6,6 +6,7 @@ const EXACT_SCORE_BONUS   = 8
 
 export const STAGE_MULTIPLIERS: Record<MatchStage, number> = {
   group:        1.0,
+  round_of_32:  1.25,
   round_of_16:  1.5,
   quarter_final: 2.0,
   semi_final:   2.5,
@@ -15,6 +16,7 @@ export const STAGE_MULTIPLIERS: Record<MatchStage, number> = {
 
 export const STAGE_LABELS: Record<MatchStage, string> = {
   group:        'Group Stage',
+  round_of_32:  'Round of 32',
   round_of_16:  'Round of 16',
   quarter_final: 'Quarter-Final',
   semi_final:   'Semi-Final',

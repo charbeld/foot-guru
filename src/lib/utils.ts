@@ -17,8 +17,8 @@ export function formatKickoff(iso: string): string {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'UTC',
-  }) + ' UTC'
+    timeZone: 'Asia/Beirut',
+  }) + ' (Beirut)'
 }
 
 export function isPredictionLocked(kickoffAt: string): boolean {

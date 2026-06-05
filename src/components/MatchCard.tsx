@@ -64,7 +64,7 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
   const pointsPreview = (() => {
     if (!outcome) return null
     const hasScore = homeGoals !== '' && awayGoals !== ''
-    const stageMult = { group:1, round_of_16:1.5, quarter_final:2, semi_final:2.5, third_place:2, final:3 }[match.stage] ?? 1
+    const stageMult = { group:1, round_of_32:1.25, round_of_16:1.5, quarter_final:2, semi_final:2.5, third_place:2, final:3 }[match.stage] ?? 1
     const favoriteIsHome = match.home_elo >= match.away_elo
     const pickedUnderdog = (favoriteIsHome && outcome === 'away') || (!favoriteIsHome && outcome === 'home')
     const gap = match.elo_gap
@@ -80,6 +80,7 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
 
   const stageBadgeColor = {
     group:         'bg-blue-500/20 text-blue-300',
+    round_of_32:   'bg-indigo-500/20 text-indigo-300',
     round_of_16:   'bg-purple-500/20 text-purple-300',
     quarter_final: 'bg-yellow-500/20 text-yellow-300',
     semi_final:    'bg-orange-500/20 text-orange-300',

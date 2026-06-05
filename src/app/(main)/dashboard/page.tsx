@@ -102,6 +102,7 @@ export default async function DashboardPage() {
             <div className="text-purple-400 font-semibold mb-2">Stage Multiplier</div>
             <div className="space-y-1 text-gray-400">
               <div className="flex justify-between"><span>Group Stage</span><span className="text-white font-bold">×1.0</span></div>
+              <div className="flex justify-between"><span>Round of 32</span><span className="text-white font-bold">×1.25</span></div>
               <div className="flex justify-between"><span>Round of 16</span><span className="text-white font-bold">×1.5</span></div>
               <div className="flex justify-between"><span>Quarter-Final</span><span className="text-white font-bold">×2.0</span></div>
               <div className="flex justify-between"><span>Semi-Final</span><span className="text-white font-bold">×2.5</span></div>

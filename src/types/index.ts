@@ -1,5 +1,5 @@
 export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'postponed'
-export type MatchStage = 'group' | 'round_of_16' | 'quarter_final' | 'semi_final' | 'third_place' | 'final'
+export type MatchStage = 'group' | 'round_of_32' | 'round_of_16' | 'quarter_final' | 'semi_final' | 'third_place' | 'final'
 export type PredictionOutcome = 'home' | 'draw' | 'away'
 
 export interface Team {
