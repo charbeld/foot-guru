@@ -39,4 +39,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|api/cron|auth/callback).*)'],
+  // api/cron/* is excluded — those endpoints are secured by CRON_SECRET header
 }
