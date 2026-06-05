@@ -190,19 +190,13 @@ export default async function GroupsPage() {
     .filter(s => (s.goals ?? 0) > 0)
     .sort((a, b) => b.goals - a.goals)
 
-  const notStarted = groups.length === 0 || groups.every(g => g.table.every(t => t.playedGames === 0))
-
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-white">Groups & Stats</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {notStarted
-              ? 'Tournament begins June 11 · Standings will update live'
-              : 'Updated every 5 min · 2026 FIFA World Cup'}
-          </p>
+          <p className="text-gray-500 text-sm mt-1">Updated every 5 min · 2026 FIFA World Cup</p>
         </div>
         <Link href="/bracket"
           className="text-sm font-semibold text-green-400 hover:text-green-300 transition-colors border border-green-500/30 px-3 py-1.5 rounded-lg hover:border-green-500/60">
@@ -269,22 +263,12 @@ export default async function GroupsPage() {
         </div>
       )}
 
-      {/* Group standings grid */}
-      {notStarted && (
-        <div className="text-center py-8 text-gray-500 border border-white/10 rounded-2xl">
-          <div className="text-4xl mb-3">📊</div>
-          <p className="font-semibold text-white">Tournament starts June 11</p>
-          <p className="text-sm mt-1">Group standings, scorers and assisters will appear here once matches begin</p>
-        </div>
-      )}
-
-      {!notStarted && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {groups.map(({ group, table }) => (
-            <GroupCard key={group} group={group} table={table} />
-          ))}
-        </div>
-      )}
+      {/* Group standings grid — always visible */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {groups.map(({ group, table }) => (
+          <GroupCard key={group} group={group} table={table} />
+        ))}
+      </div>
     </div>
   )
 }
