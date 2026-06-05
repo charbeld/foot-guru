@@ -29,7 +29,8 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
   const [committed, setCommitted] = useState(alreadySaved)
 
   const kickoffLocked = isPredictionLocked(match.kickoff_at)
-  const isEditable    = !kickoffLocked && !committed
+  const isTBD         = !match.home_team_id || !match.away_team_id
+  const isEditable    = !kickoffLocked && !committed && !isTBD
   const isFinished    = match.status === 'finished'
 
   // Mirror outcome from exact score input
@@ -117,15 +118,21 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
 
       {/* Teams */}
       <div className="flex items-center gap-4">
+        {/* Home */}
         <div className="flex-1 flex flex-col items-center gap-2">
-          {match.home_team?.flag_url && (
+          {match.home_team?.flag_url ? (
             <Image src={match.home_team.flag_url} alt={match.home_team.name}
               width={48} height={32} className="rounded shadow-md object-cover" unoptimized />
+          ) : (
+            <div className="w-12 h-8 rounded bg-white/10 flex items-center justify-center text-gray-600 text-xs">TBD</div>
           )}
-          <span className="text-sm font-semibold text-white text-center leading-tight">{match.home_team?.name}</span>
-          <span className="text-xs text-gray-500">ELO {match.home_elo}</span>
+          <span className="text-sm font-semibold text-white text-center leading-tight">
+            {match.home_team?.name ?? match.placeholder_home ?? 'TBD'}
+          </span>
+          {match.home_team && <span className="text-xs text-gray-500">ELO {match.home_elo}</span>}
         </div>
 
+        {/* Score / VS */}
         <div className="flex flex-col items-center gap-1 shrink-0">
           {isFinished ? (
             <div className="text-2xl font-black text-white tabular-nums">
@@ -134,20 +141,25 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
           ) : (
             <div className="text-base font-bold text-gray-600">VS</div>
           )}
-          {match.elo_gap > 50 && (
+          {match.home_team && match.elo_gap > 50 && (
             <span className="text-xs text-orange-400 text-center">
               {match.elo_gap > 300 ? '🔥 Big upset' : match.elo_gap > 150 ? '⚡ Upset bonus' : '〰 Slight gap'}
             </span>
           )}
         </div>
 
+        {/* Away */}
         <div className="flex-1 flex flex-col items-center gap-2">
-          {match.away_team?.flag_url && (
+          {match.away_team?.flag_url ? (
             <Image src={match.away_team.flag_url} alt={match.away_team.name}
               width={48} height={32} className="rounded shadow-md object-cover" unoptimized />
+          ) : (
+            <div className="w-12 h-8 rounded bg-white/10 flex items-center justify-center text-gray-600 text-xs">TBD</div>
           )}
-          <span className="text-sm font-semibold text-white text-center leading-tight">{match.away_team?.name}</span>
-          <span className="text-xs text-gray-500">ELO {match.away_elo}</span>
+          <span className="text-sm font-semibold text-white text-center leading-tight">
+            {match.away_team?.name ?? match.placeholder_away ?? 'TBD'}
+          </span>
+          {match.away_team && <span className="text-xs text-gray-500">ELO {match.away_elo}</span>}
         </div>
       </div>
 
