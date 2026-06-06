@@ -4,15 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Session workflow (IMPORTANT — read at the start of every session)
 
-Every session must run on a dated branch so changes land as a reviewable PR.
+Every session runs on a dated branch (`session/YYYY-MM-DD`) so changes land as a reviewable PR.
 
-**At the start of a session**, before making any changes, run:
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/start-session.ps1
-```
-This checks out `main`, pulls, then creates (or resumes) `session/YYYY-MM-DD` and sets the upstream.
+**Branch creation is automatic.** The Stop hook fires after every Claude turn. On the first turn that produces changes, `scripts/auto-deploy.ps1` detects that the repo is on `main`, creates (or resumes) today's `session/YYYY-MM-DD` branch, then commits and pushes there. No manual step required.
 
-**During the session**, the Stop hook in `.claude/settings.json` auto-commits and pushes to the session branch after every Claude turn via `scripts/auto-deploy.ps1`. The hook is a no-op on `main` — so nothing is committed until the session branch exists.
+`scripts/start-session.ps1` still exists if you ever want to manually pre-create the branch before starting work, but it is no longer required.
 
 **At the end of a session**, use the `/create-pr` command (or ask Claude to open a PR). Claude will run `gh pr create` targeting `main` with a summary of all changes made during the session.
 

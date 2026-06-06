@@ -4,23 +4,32 @@ Set-Location $repoPath
 $status = git status --porcelain
 if (-not $status) { exit 0 }
 
-# Never auto-commit directly to main — require a session branch
 $branch = git rev-parse --abbrev-ref HEAD
+
+# If on main, automatically create today's session branch before committing
 if ($branch -eq "main") {
-    Write-Host "Auto-deploy skipped: on main. Run scripts/start-session.ps1 to create a session branch."
-    exit 0
+    $date = Get-Date -Format "yyyy-MM-dd"
+    $sessionBranch = "session/$date"
+
+    $existing = git branch --list $sessionBranch
+    if ($existing) {
+        git checkout $sessionBranch | Out-Null
+    } else {
+        git pull --quiet | Out-Null
+        git checkout -b $sessionBranch | Out-Null
+    }
+
+    $branch = $sessionBranch
+    Write-Host "Auto-deploy: created session branch $branch"
 }
 
 git add -A
 
-# Build commit message from changed files
 $changed = (git diff --cached --name-only) -join ", "
-$date = Get-Date -Format "yyyy-MM-dd HH:mm"
-$msg = "Auto-deploy ($date): $changed
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+$msg = "Auto-deploy ($timestamp): $changed
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 git commit -m $msg
-
-# Push with -u in case upstream isn't set yet for this session branch
 git push -u origin $branch
