@@ -214,13 +214,13 @@ function UserPredictionsPanel({
               onClick={togglePrivacy}
               disabled={toggling}
               className={cn(
-                'relative w-10 h-6 rounded-full transition-colors shrink-0',
+                'relative w-11 h-6 rounded-full transition-colors shrink-0 overflow-hidden',
                 hideMyPending ? 'bg-green-500' : 'bg-white/20'
               )}
             >
               <span className={cn(
-                'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
-                hideMyPending ? 'translate-x-5' : 'translate-x-1'
+                'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
+                hideMyPending ? 'translate-x-6' : 'translate-x-1'
               )} />
             </button>
           </div>
