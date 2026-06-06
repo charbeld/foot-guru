@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Use admin client to bypass RLS so any authenticated user can view others' predictions
-  const admin = createAdminClient()
+  const admin = await createAdminClient()
   const { data: predictions, error } = await admin
     .from('predictions')
     .select(`
