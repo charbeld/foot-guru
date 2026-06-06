@@ -48,6 +48,7 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
   const handleSave = async () => {
     if (!outcome || !onPredict) return
     setSaving(true)
+    setCommitted(true) // optimistic — revert on error
     try {
       await onPredict(
         match.id,
@@ -55,7 +56,8 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
         homeGoals !== '' ? parseInt(homeGoals) : null,
         awayGoals !== '' ? parseInt(awayGoals) : null,
       )
-      setCommitted(true)
+    } catch {
+      setCommitted(false) // revert
     } finally {
       setSaving(false)
     }

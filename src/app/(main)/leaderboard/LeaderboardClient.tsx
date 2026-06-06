@@ -163,8 +163,9 @@ function UserPredictionsPanel({
 
   const togglePrivacy = async () => {
     if (hideMyPending === null) return
-    setToggling(true)
     const next = !hideMyPending
+    setHideMyPending(next) // optimistic
+    setToggling(true)
     try {
       const res = await fetch('/api/profile', {
         method: 'PATCH',
@@ -172,8 +173,9 @@ function UserPredictionsPanel({
         body: JSON.stringify({ hide_pending_predictions: next }),
       })
       if (!res.ok) throw new Error('Failed')
-      setHideMyPending(next)
-    } catch {}
+    } catch {
+      setHideMyPending(hideMyPending) // revert
+    }
     setToggling(false)
   }
 

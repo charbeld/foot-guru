@@ -66,12 +66,18 @@ export function MatchesClient({ matches: initialMatches, predictions: initialPre
   }, [filtered])
 
   const handlePredict = async (matchId: string, outcome: PredictionOutcome, home: number | null, away: number | null) => {
+    // Optimistic update so the prediction count and red dot update immediately
+    const optimistic = { match_id: matchId, predicted_outcome: outcome, predicted_home: home, predicted_away: away } as any
+    setPredictions(prev => [...prev.filter(p => p.match_id !== matchId), optimistic])
     const res = await fetch('/api/predictions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ match_id: matchId, predicted_outcome: outcome, predicted_home: home, predicted_away: away }),
     })
-    if (!res.ok) throw new Error('Failed to save')
+    if (!res.ok) {
+      setPredictions(prev => prev.filter(p => p.match_id !== matchId)) // revert
+      throw new Error('Failed to save')
+    }
     const saved = await res.json()
     setPredictions(prev => [...prev.filter(p => p.match_id !== matchId), saved])
   }
