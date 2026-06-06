@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -15,7 +15,9 @@ export async function GET(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: predictions, error } = await supabase
+  // Use admin client to bypass RLS so any authenticated user can view others' predictions
+  const admin = createAdminClient()
+  const { data: predictions, error } = await admin
     .from('predictions')
     .select(`
       id, predicted_outcome, predicted_home, predicted_away,
