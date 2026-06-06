@@ -121,14 +121,19 @@ function PointsBreakdown({ pred }: { pred: Prediction }) {
 
 // ─── User predictions drawer ──────────────────────────────────────────────────
 function UserPredictionsPanel({
-  leader, onClose,
+  leader, currentUserId, onClose,
 }: {
   leader: Leader
+  currentUserId: string
   onClose: () => void
 }) {
+  const isMe = leader.id === currentUserId
   const [predictions, setPredictions] = useState<Prediction[] | null>(null)
+  const [hiddenPending, setHiddenPending] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [toggling, setToggling] = useState(false)
+  const [hideMyPending, setHideMyPending] = useState<boolean | null>(null)
 
   const load = async () => {
     if (predictions !== null) return
@@ -138,6 +143,15 @@ function UserPredictionsPanel({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setPredictions(data.predictions)
+      setHiddenPending(data.hiddenPending ?? false)
+      if (isMe) {
+        // Fetch own privacy setting from profile
+        const profileRes = await fetch(`/api/predictions/user?userId=${leader.id}`)
+        // hiddenPending=false for self, so check via a separate flag
+        // We infer it: if hiddenPending is false for self we still need the stored value
+        // Use a dedicated endpoint — for now derive from data
+        setHideMyPending(data.myHideSetting ?? false)
+      }
     } catch (e: any) {
       setError(e.message ?? 'Failed to load')
     } finally {
@@ -145,12 +159,26 @@ function UserPredictionsPanel({
     }
   }
 
-  // Load on mount
   if (predictions === null && !loading && !error) { load() }
+
+  const togglePrivacy = async () => {
+    if (hideMyPending === null) return
+    setToggling(true)
+    const next = !hideMyPending
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hide_pending_predictions: next }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      setHideMyPending(next)
+    } catch {}
+    setToggling(false)
+  }
 
   const finished = predictions?.filter(p => p.match?.status === 'finished') ?? []
   const pending  = predictions?.filter(p => p.match?.status !== 'finished') ?? []
-  const totalPts = finished.reduce((s, p) => s + (p.points_earned ?? 0), 0)
   const correct  = finished.filter(p => p.outcome_correct).length
 
   return (
@@ -174,6 +202,29 @@ function UserPredictionsPanel({
             ✕
           </button>
         </div>
+
+        {/* Privacy toggle — only shown for own profile */}
+        {isMe && hideMyPending !== null && (
+          <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-semibold text-white">Hide upcoming predictions</div>
+              <div className="text-[10px] text-gray-500 mt-0.5">Others won't see your picks before kickoff</div>
+            </div>
+            <button
+              onClick={togglePrivacy}
+              disabled={toggling}
+              className={cn(
+                'relative w-10 h-6 rounded-full transition-colors shrink-0',
+                hideMyPending ? 'bg-green-500' : 'bg-white/20'
+              )}
+            >
+              <span className={cn(
+                'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
+                hideMyPending ? 'translate-x-5' : 'translate-x-1'
+              )} />
+            </button>
+          </div>
+        )}
 
         {/* Summary bar */}
         {predictions && predictions.length > 0 && (
@@ -208,9 +259,15 @@ function UserPredictionsPanel({
             <div className="text-center py-12 text-red-400 text-sm">{error}</div>
           )}
 
-          {predictions?.length === 0 && (
+          {predictions?.length === 0 && !hiddenPending && (
             <div className="text-center py-12 text-gray-600">
               <p className="text-sm">No predictions yet.</p>
+            </div>
+          )}
+
+          {hiddenPending && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-center text-sm text-gray-500">
+              🔒 This player has hidden their upcoming predictions
             </div>
           )}
 
@@ -440,6 +497,7 @@ export function LeaderboardClient({ leaders, currentUserId }: LeaderboardClientP
       {selectedLeader && (
         <UserPredictionsPanel
           leader={selectedLeader}
+          currentUserId={currentUserId}
           onClose={() => setSelectedLeader(null)}
         />
       )}

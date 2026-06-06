@@ -77,13 +77,14 @@ create table public.predictions (
 -- PROFILES (public extension of auth.users)
 -- ============================================================
 create table public.profiles (
-  id           uuid primary key references auth.users(id) on delete cascade,
-  username     text unique not null,
-  display_name text,
-  avatar_url   text,
-  total_points integer not null default 0,
-  created_at   timestamptz default now(),
-  updated_at   timestamptz default now()
+  id                        uuid primary key references auth.users(id) on delete cascade,
+  username                  text unique not null,
+  display_name              text,
+  avatar_url                text,
+  total_points              integer not null default 0,
+  hide_pending_predictions  boolean not null default false,
+  created_at                timestamptz default now(),
+  updated_at                timestamptz default now()
 );
 
 -- ============================================================

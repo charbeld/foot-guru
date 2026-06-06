@@ -15,8 +15,18 @@ export async function GET(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Use admin client to bypass RLS so any authenticated user can view others' predictions
   const admin = createAdminClient()
+
+  // Check if the target user has hidden their upcoming predictions
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('hide_pending_predictions')
+    .eq('id', userId)
+    .single()
+
+  const isSelf = user.id === userId
+  const hidePending = profile?.hide_pending_predictions === true && !isSelf
+
   const { data: predictions, error } = await admin
     .from('predictions')
     .select(`
@@ -33,5 +43,14 @@ export async function GET(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ predictions: predictions ?? [] })
+  const result = hidePending
+    ? (predictions ?? []).filter((p: any) => p.match?.status === 'finished')
+    : (predictions ?? [])
+
+  return NextResponse.json({
+    predictions: result,
+    hiddenPending: hidePending,
+    // Own profile: return the stored setting so the toggle shows the right state
+    myHideSetting: isSelf ? (profile?.hide_pending_predictions ?? false) : undefined,
+  })
 }
