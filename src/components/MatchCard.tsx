@@ -292,22 +292,7 @@ export function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
         </div>
       )}
 
-      {/* Wikipedia source link */}
-      {match.wiki_url && (
-        <div className="mt-3 flex justify-end">
-          <a
-            href={match.wiki_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors flex items-center gap-1"
-          >
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z" />
-            </svg>
-            Wikipedia
-          </a>
-        </div>
-      )}
+
     </div>
   )
 }

@@ -95,22 +95,9 @@ export function StatsClient({ topScorers, topAssisters }: StatsClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-white">Tournament Stats</h1>
-          <p className="text-gray-500 text-sm mt-1">2026 FIFA World Cup · Updated every 5 min</p>
-        </div>
-        <a
-          href="https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_statistics"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors border border-white/10 rounded-lg px-3 py-1.5 mt-1"
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z" />
-          </svg>
-          Wikipedia
-        </a>
+      <div>
+        <h1 className="text-2xl font-black text-white">Tournament Stats</h1>
+        <p className="text-gray-500 text-sm mt-1">2026 FIFA World Cup · Updated every 5 min</p>
       </div>
 
       {/* Tabs */}

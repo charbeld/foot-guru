@@ -130,7 +130,6 @@ export default async function DashboardPage() {
             {
               matchup: 'Spain vs Qatar',
               stage: 'Group Stage',
-              flags: ['🇪🇸', '🇶🇦'],
               scenario: 'You predict Spain to win. Spain are heavy favourites (ELO gap 732).',
               steps: [
                 { label: 'Correct outcome', value: '5 pts', color: 'text-green-400' },
@@ -146,7 +145,6 @@ export default async function DashboardPage() {
             {
               matchup: 'Morocco vs Netherlands',
               stage: 'Group Stage',
-              flags: ['🇲🇦', '🇳🇱'],
               scenario: 'You predict Morocco to win 1–0 (Morocco are the underdogs, ELO gap 120).',
               steps: [
                 { label: 'Correct outcome', value: '5 pts', color: 'text-green-400' },
@@ -162,7 +160,6 @@ export default async function DashboardPage() {
             {
               matchup: 'Argentina vs Germany',
               stage: 'Quarter-Final',
-              flags: ['🇦🇷', '🇩🇪'],
               scenario: 'You predict Germany to win. Germany are underdogs (ELO gap 188).',
               steps: [
                 { label: 'Correct outcome', value: '5 pts', color: 'text-green-400' },
@@ -178,7 +175,6 @@ export default async function DashboardPage() {
             {
               matchup: 'Spain vs Argentina',
               stage: 'Final',
-              flags: ['🇪🇸', '🇦🇷'],
               scenario: 'You predict Argentina to win 2–1. ELO gap is only 42 — teams are evenly matched.',
               steps: [
                 { label: 'Correct outcome', value: '5 pts', color: 'text-green-400' },
@@ -194,7 +190,6 @@ export default async function DashboardPage() {
             {
               matchup: 'Saudi Arabia vs France',
               stage: 'Round of 16',
-              flags: ['🇸🇦', '🇫🇷'],
               scenario: 'You predict Saudi Arabia to win 2–1 (massive upset — ELO gap 496!).',
               steps: [
                 { label: 'Correct outcome', value: '5 pts', color: 'text-green-400' },
@@ -211,7 +206,6 @@ export default async function DashboardPage() {
             <div key={i} className="bg-white/[0.03] border border-white/5 rounded-xl p-4 space-y-3">
               {/* Match header */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-lg">{ex.flags[0]}</span>
                 <span className="text-xs font-black text-white">{ex.matchup}</span>
                 <span className="text-xs text-gray-600">·</span>
                 <span className="text-xs text-gray-500">{ex.stage}</span>

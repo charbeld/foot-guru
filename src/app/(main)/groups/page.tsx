@@ -56,24 +56,11 @@ async function fetchGroupStandings(): Promise<{ group: string; table: TeamRow[] 
     }))
 }
 
-const WIKI_GROUP_BASE = 'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_Group_'
-
 function GroupCard({ group, table }: { group: string; table: TeamRow[] }) {
   return (
     <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/10 bg-white/[0.03] flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-white/10 bg-white/[0.03]">
         <span className="text-sm font-black text-white">GROUP {group}</span>
-        <a
-          href={`${WIKI_GROUP_BASE}${group}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors flex items-center gap-1"
-        >
-          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z" />
-          </svg>
-          Wikipedia
-        </a>
       </div>
       <table className="w-full text-xs">
         <thead>
