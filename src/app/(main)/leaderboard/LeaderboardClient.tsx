@@ -205,9 +205,9 @@ function UserPredictionsPanel({
           </button>
         </div>
 
-        {/* Privacy toggle — only shown for own profile */}
+        {/* Privacy — red card toggle */}
         {isMe && hideMyPending !== null && (
-          <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between">
+          <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between gap-4">
             <div>
               <div className="text-xs font-semibold text-white">Hide upcoming predictions</div>
               <div className="text-[10px] text-gray-500 mt-0.5">Others won't see your picks before kickoff</div>
@@ -215,16 +215,14 @@ function UserPredictionsPanel({
             <button
               onClick={togglePrivacy}
               disabled={toggling}
+              title={hideMyPending ? 'Predictions hidden' : 'Predictions visible'}
               className={cn(
-                'relative w-11 h-6 rounded-full transition-colors shrink-0 overflow-hidden',
-                hideMyPending ? 'bg-green-500' : 'bg-white/20'
+                'shrink-0 w-8 h-11 rounded-[4px] border-2 transition-all duration-200 shadow-md active:scale-95',
+                hideMyPending
+                  ? 'bg-red-500 border-red-700 shadow-red-500/40'
+                  : 'bg-white/10 border-white/20 hover:bg-white/20'
               )}
-            >
-              <span className={cn(
-                'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-                hideMyPending ? 'translate-x-6' : 'translate-x-1'
-              )} />
-            </button>
+            />
           </div>
         )}
 
