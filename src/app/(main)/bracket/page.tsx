@@ -80,24 +80,6 @@ const MATCH_QUADRANT: Record<string, number> = {
   '537386': 3,
 }
 
-// ─── Legend ───────────────────────────────────────────────────────────────────
-function Legend() {
-  return (
-    <div className="flex flex-wrap gap-3 items-center text-xs">
-      {QUADRANT_COLORS.map((c, i) => (
-        <div key={i} className="flex items-center gap-1.5">
-          <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', c.dot)} />
-          <span className={cn('font-semibold', c.text)}>{c.label}</span>
-          <span className="text-gray-600">— {c.sfLabel.split(' → ')[1]}</span>
-        </div>
-      ))}
-      <div className="flex items-center gap-1.5">
-        <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shrink-0" />
-        <span className="font-semibold text-yellow-400">SF · 3rd · Final</span>
-      </div>
-    </div>
-  )
-}
 
 // ─── Compact match tile for bracket ──────────────────────────────────────────
 function BracketTile({
@@ -281,8 +263,6 @@ export default async function BracketPage() {
           Teams advance automatically as each game is decided · Bracket updates live
         </p>
       </div>
-
-      <Legend />
 
       {!hasAnyKnockout ? (
         <div className="text-center py-20 text-gray-600">
