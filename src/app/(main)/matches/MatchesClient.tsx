@@ -135,6 +135,12 @@ export function MatchesClient({ matches: initialMatches, predictions: initialPre
           const isOpen    = expanded[dateKey] ?? false
           const predicted = dayMatches.filter(m => predictionMap[m.id]).length
           const total     = dayMatches.filter(m => m.home_team_id).length // excludes TBD
+          const now       = new Date()
+          const hasMissed = dayMatches.some(m =>
+            m.home_team_id &&
+            !predictionMap[m.id] &&
+            new Date(m.kickoff_at) > now
+          )
 
           return (
             <div key={dateKey} className="rounded-2xl border border-white/10 overflow-hidden">
@@ -154,6 +160,9 @@ export function MatchesClient({ matches: initialMatches, predictions: initialPre
                     {dayMatches.length} match{dayMatches.length !== 1 ? 'es' : ''}
                     {total > 0 && predicted > 0 && ` · ${predicted}/${total} predicted`}
                   </span>
+                  {hasMissed && (
+                    <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                  )}
                 </div>
                 <span className={`text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
                   ▾
