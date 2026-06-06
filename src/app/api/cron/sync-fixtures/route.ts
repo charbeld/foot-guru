@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = await createAdminClient()
+  const supabase = createAdminClient()
   const apiKey   = process.env.FOOTBALL_DATA_API_KEY!
 
   // Fetch full WC schedule
