@@ -167,7 +167,7 @@ function UserPredictionsPanel({
               {leader.display_name ?? leader.username}
               <span className="ml-1.5 text-sm text-gray-500">@{leader.username}</span>
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">Past predictions</div>
+            <div className="text-xs text-gray-500 mt-0.5">All predictions</div>
           </div>
           <button onClick={onClose}
             className="text-gray-500 hover:text-white text-lg leading-none transition-colors">
@@ -288,7 +288,7 @@ function UserPredictionsPanel({
           {pending.length > 0 && (
             <div>
               <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 mt-3">
-                Upcoming / locked
+                Upcoming predictions
               </div>
               <div className="space-y-2">
                 {pending.map(pred => {
