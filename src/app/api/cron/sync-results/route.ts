@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { calculateScore } from '@/lib/scoring'
+import { isAuthorizedCron } from '@/lib/cron-auth'
 import type { MatchStage, PredictionOutcome } from '@/types'
 
 // Runs every 5 minutes — detects finished matches and scores predictions.
 // Predictions are considered eligible once kickoff_at has passed (no separate lock step needed —
 // the API route already blocks late submissions, and the frontend locks the UI at kickoff).
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCron(request.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

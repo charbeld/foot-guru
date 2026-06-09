@@ -110,7 +110,10 @@ create table public.league_members (
 -- ============================================================
 
 -- Global leaderboard
-create or replace view public.global_leaderboard as
+-- security_invoker: the view runs with the querying user's privileges so the
+-- underlying tables' RLS policies are enforced (not the view owner's).
+create or replace view public.global_leaderboard
+  with (security_invoker = on) as
 select
   p.id,
   p.username,
@@ -121,7 +124,9 @@ select
 from public.profiles p;
 
 -- League leaderboard (parameterized via RPC below)
-create or replace view public.league_leaderboard as
+-- security_invoker: league_members RLS restricts this to leagues the caller is in.
+create or replace view public.league_leaderboard
+  with (security_invoker = on) as
 select
   lm.league_id,
   p.id        as user_id,
@@ -139,7 +144,8 @@ join public.profiles p on p.id = lm.user_id;
 
 -- Auto-create profile on signup
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer
+set search_path = public, pg_temp as $$
 begin
   insert into public.profiles (id, username, display_name)
   values (
@@ -157,7 +163,8 @@ create trigger on_auth_user_created
 
 -- Recalculate total_points when a prediction is scored
 create or replace function public.update_user_total_points()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer
+set search_path = public, pg_temp as $$
 begin
   update public.profiles
   set total_points = (
@@ -193,6 +200,63 @@ create trigger profiles_updated_at before update on public.profiles
   for each row execute procedure public.set_updated_at();
 
 -- ============================================================
+-- SECURITY HELPERS
+-- ============================================================
+
+-- Membership check used inside league RLS policies. SECURITY DEFINER so it does
+-- NOT re-trigger league_members RLS (which would recurse infinitely).
+create or replace function public.is_league_member(p_league_id uuid)
+returns boolean language sql security definer stable
+set search_path = public, pg_temp as $$
+  select exists (
+    select 1 from public.league_members
+    where league_id = p_league_id and user_id = auth.uid()
+  );
+$$;
+
+-- Returns the kickoff time for a match (used by prediction RLS to enforce the lock).
+create or replace function public.match_kickoff(p_match_id uuid)
+returns timestamptz language sql security definer stable
+set search_path = public, pg_temp as $$
+  select kickoff_at from public.matches where id = p_match_id;
+$$;
+
+-- Join a league by invite code without exposing every league's code to clients.
+-- Runs as definer so the caller never needs SELECT on the full leagues table.
+create or replace function public.join_league(p_invite_code text)
+returns table (id uuid, name text)
+language plpgsql security definer
+set search_path = public, pg_temp as $$
+declare
+  v_league public.leagues%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'Unauthorized';
+  end if;
+
+  select * into v_league
+  from public.leagues
+  where invite_code = upper(p_invite_code);
+
+  if not found then
+    raise exception 'Invalid invite code';
+  end if;
+
+  if exists (
+    select 1 from public.league_members
+    where league_id = v_league.id and user_id = auth.uid()
+  ) then
+    raise exception 'Already a member';
+  end if;
+
+  insert into public.league_members (league_id, user_id)
+  values (v_league.id, auth.uid());
+
+  return query select v_league.id, v_league.name;
+end;
+$$;
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 alter table public.profiles      enable row level security;
@@ -210,20 +274,33 @@ create policy "matches_public_read" on public.matches for select using (true);
 create policy "profiles_public_read" on public.profiles for select using (true);
 create policy "profiles_own_write"   on public.profiles for update using (auth.uid() = id);
 
--- Predictions: own CRUD only, no read of others before lock
+-- Predictions: own CRUD only. Insert/update are rejected once the match has
+-- kicked off — the lock is enforced in the database, not just the API route.
 create policy "predictions_own_select" on public.predictions
   for select using (auth.uid() = user_id);
 create policy "predictions_own_insert" on public.predictions
-  for insert with check (auth.uid() = user_id);
+  for insert with check (
+    auth.uid() = user_id
+    and public.match_kickoff(match_id) > now()
+  );
 create policy "predictions_own_update" on public.predictions
-  for update using (auth.uid() = user_id and is_locked = false);
+  for update using (
+    auth.uid() = user_id
+    and public.match_kickoff(match_id) > now()
+  ) with check (
+    auth.uid() = user_id
+    and public.match_kickoff(match_id) > now()
+  );
 
--- Leagues: public read, authenticated insert
-create policy "leagues_public_read"  on public.leagues for select using (true);
+-- Leagues: readable only by members (or the creator) so invite codes can't be
+-- enumerated. Joining goes through the join_league() RPC. Authenticated insert.
+create policy "leagues_member_read"  on public.leagues for select
+  using (created_by = auth.uid() or public.is_league_member(id));
 create policy "leagues_auth_insert"  on public.leagues for insert with check (auth.uid() is not null);
 create policy "leagues_owner_update" on public.leagues for update using (auth.uid() = created_by);
 
--- League members: own CRUD
-create policy "league_members_select" on public.league_members for select using (true);
+-- League members: read members of your own leagues; own insert/delete.
+create policy "league_members_select" on public.league_members for select
+  using (user_id = auth.uid() or public.is_league_member(league_id));
 create policy "league_members_insert" on public.league_members for insert with check (auth.uid() = user_id);
 create policy "league_members_delete" on public.league_members for delete using (auth.uid() = user_id);

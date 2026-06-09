@@ -43,9 +43,20 @@ export async function GET(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const result = hidePending
-    ? (predictions ?? []).filter((p: any) => p.match?.status === 'finished')
-    : (predictions ?? [])
+  // Never reveal another user's prediction before its match has kicked off —
+  // otherwise a viewer could copy un-locked picks. Once kickoff has passed the
+  // pick is locked and safe to show. The hide_pending flag further restricts a
+  // user's locked-but-unfinished predictions to finished matches only.
+  const now = Date.now()
+  const result = isSelf
+    ? (predictions ?? [])
+    : (predictions ?? []).filter((p: any) => {
+        const kickoff = p.match?.kickoff_at
+        const locked = kickoff ? new Date(kickoff).getTime() <= now : false
+        if (!locked) return false
+        if (hidePending) return p.match?.status === 'finished'
+        return true
+      })
 
   return NextResponse.json({
     predictions: result,
