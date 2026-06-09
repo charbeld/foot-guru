@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { isAuthorizedCron } from '@/lib/cron-auth'
 import type { MatchStage } from '@/types'
 
 const STAGE_MAP: Record<string, MatchStage> = {
@@ -30,8 +31,7 @@ const TLA_MAP: Record<string, string> = {
 
 // Called by pg_cron daily — keeps all fixtures up to date as teams qualify
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCron(request.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

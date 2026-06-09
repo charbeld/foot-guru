@@ -24,6 +24,26 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { match_id, predicted_outcome, predicted_home, predicted_away } = body
 
+  // ── Validate input ─────────────────────────────────────────────────────────
+  if (typeof match_id !== 'string' || !match_id) {
+    return NextResponse.json({ error: 'match_id required' }, { status: 400 })
+  }
+  if (!['home', 'draw', 'away'].includes(predicted_outcome)) {
+    return NextResponse.json({ error: 'Invalid predicted_outcome' }, { status: 400 })
+  }
+  const isValidScore = (v: unknown) =>
+    v === null || v === undefined ||
+    (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 99)
+  if (!isValidScore(predicted_home) || !isValidScore(predicted_away)) {
+    return NextResponse.json({ error: 'Scores must be integers between 0 and 99' }, { status: 400 })
+  }
+  // Exact score is all-or-nothing: either both provided or neither.
+  const homeProvided = predicted_home !== null && predicted_home !== undefined
+  const awayProvided = predicted_away !== null && predicted_away !== undefined
+  if (homeProvided !== awayProvided) {
+    return NextResponse.json({ error: 'Provide both scores or neither' }, { status: 400 })
+  }
+
   // Validate match exists and is not locked
   const { data: match } = await supabase
     .from('matches')

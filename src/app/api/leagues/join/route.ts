@@ -7,24 +7,25 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { invite_code } = await request.json()
-  if (!invite_code) return NextResponse.json({ error: 'Invite code required' }, { status: 400 })
-
-  const { data: league } = await supabase
-    .from('leagues')
-    .select('id, name')
-    .eq('invite_code', invite_code.toUpperCase())
-    .single()
-
-  if (!league) return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
-
-  const { error } = await supabase
-    .from('league_members')
-    .insert({ league_id: league.id, user_id: user.id })
-
-  if (error?.code === '23505') {
-    return NextResponse.json({ error: 'Already a member' }, { status: 409 })
+  if (typeof invite_code !== 'string' || !invite_code.trim()) {
+    return NextResponse.json({ error: 'Invite code required' }, { status: 400 })
   }
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Lookup + membership insert happen atomically inside join_league(), which runs
+  // as SECURITY DEFINER so clients never get SELECT on the full leagues table
+  // (prevents enumerating every league's invite code).
+  const { data, error } = await supabase.rpc('join_league', { p_invite_code: invite_code.trim() })
+
+  if (error) {
+    if (error.message.includes('Already a member')) {
+      return NextResponse.json({ error: 'Already a member' }, { status: 409 })
+    }
+    if (error.message.includes('Invalid invite code')) {
+      return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  const league = Array.isArray(data) ? data[0] : data
   return NextResponse.json(league)
 }
